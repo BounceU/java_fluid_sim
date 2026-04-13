@@ -1,0 +1,30 @@
+# Maven build output
+/target/
+
+# Maven local/config artifacts
+.releaseBackup
+pom.xml.releaseBackup
+pom.xml.tag
+pom.xml.versionsBackup
+pom.xml.next
+
+# Java artifacts
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs and temp files
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+
+# IDE/editor files
+.idea/
+.vscode/
+*.iml
+
+# Upgrade-session artifacts
+.github/java-upgrade/
