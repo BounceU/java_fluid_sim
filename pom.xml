@@ -14,10 +14,11 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>25</maven.compiler.release>
-    <maven.compiler.source>25</maven.compiler.source>
-    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.outputTimestamp>2026-04-13T00:00:00Z</project.build.outputTimestamp>
+    <jacoco.skip>false</jacoco.skip>
   </properties>
 
   <dependencies>
@@ -98,7 +99,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>[25,26)</version>
+                  <version>[21,22)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>[3.9.14,)</version>
@@ -130,6 +131,9 @@
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
         <version>0.8.12</version>
+        <configuration>
+          <skip>${jacoco.skip}</skip>
+        </configuration>
         <executions>
           <execution>
             <goals>
