@@ -1,18 +1,20 @@
 package com.benliebkemann.simulation;
 
-import org.ejml.simple.SimpleMatrix;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Particle {
 
-	SimpleMatrix position, velocity, force;
+	Vector2D position, velocity, force;
+
+	public List<Particle> neighbors = new ArrayList<>();
 
 	double density, pressure;
 
-	public Particle() {
-		double[] zeros = { 0.0, 0.0 };
-		this.position = new SimpleMatrix(zeros);
-		this.velocity = new SimpleMatrix(zeros);
-		this.force = new SimpleMatrix(zeros);
+	public Particle(double x, double y) {
+		this.position = new Vector2D(x, y);
+		this.velocity = new Vector2D(0.0, 0.0);
+		this.force = new Vector2D(0.0, 0.0);
 
 		this.density = 0.0;
 		this.pressure = 0.0;

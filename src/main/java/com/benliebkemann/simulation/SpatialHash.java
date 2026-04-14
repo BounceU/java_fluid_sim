@@ -13,7 +13,7 @@ public class SpatialHash {
 	/** The hash map of cells based on location */
 	private final Map<Long, List<Particle>> grid;
 
-	public SpatialHash(int screenWidth, int screenHeight, double cellSize) {
+	public SpatialHash(double cellSize) {
 		this.cellSize = cellSize;
 		this.grid = new HashMap<>();
 	}
@@ -33,7 +33,7 @@ public class SpatialHash {
 	 * @param p the particle to insert
 	 */
 	public void insert(Particle p) {
-		long key = getKey(p.position.get(0), p.position.get(1));
+		long key = getKey(p.position.x, p.position.y);
 		grid.computeIfAbsent(key, k -> new ArrayList<>()).add(p);
 	}
 
@@ -44,22 +44,22 @@ public class SpatialHash {
 	 * @param p the particle to get the neighbors of
 	 * @return the list of neighboring particles, includes p
 	 */
-	public List<Particle> getNeighbors(Particle p) {
-		List<Particle> neighbors = new ArrayList<>();
+	public List<Particle> getNeighbors(Particle p, List<Particle> results) {
+		results.clear();
 
-		int pCol = (int) Math.floor(p.position.get(0) / cellSize);
-		int pRow = (int) Math.floor(p.position.get(1) / cellSize);
+		int pCol = (int) Math.floor(p.position.x / cellSize);
+		int pRow = (int) Math.floor(p.position.y / cellSize);
 
 		for (int dy = -1; dy <= 1; dy++) {
 			for (int dx = -1; dx <= 1; dx++) {
 				long key = getHashKey(pCol + dx, pRow + dy);
 				List<Particle> cell = grid.get(key);
 				if (cell != null) {
-					neighbors.addAll(cell);
+					results.addAll(cell);
 				}
 			}
 		}
-		return neighbors;
+		return results;
 
 	}
 

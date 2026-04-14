@@ -2,28 +2,35 @@ package com.benliebkemann.simulation;
 
 public class SimConstants {
 
-	/** Gravitational Constant */
+	// Physical constants
+
+	/** Gravitational Constant (m/s^2) */
 	public static double GRAVITY = 9.81;
 
-	/** Smoothing Radius (Kernel Size) */
-	public static double H = 0.04;
+	/** Rest density (kg/m^3) */
+	static double REST_DENSITY = 998.2;
 
-	/** Particle Mass */
-	static double MASS = 0.02;
-
-	/** Rest density */
-	static double REST_DENSITY = 1000.0;
-
-	/** Stiffness for Tait's Equation */
-	static double GAS_CONSTANT = 2000.0;
-
-	/** Fluid Viscosity */
-	static double VISCOSITY = 250.0;
-
-	/** Surface tension for color field gradient */
+	/** Surface tension for color field gradient (N/m) */
 	static double SURFACE_TENSION = 0.0728;
 
-	/** Time step */
-	static double DT = 0.0008;
+	/** Fluid Viscosity (Pa*s) */
+	static double VISCOSITY = 0.001;
+
+	/** Speed of sound (m/s) */
+	static double SPEED_OF_SOUND = 50.0; // 1480.0;
+
+	// Simulation constants
+
+	/** Smoothing Radius (Kernel Size), (m) */
+	static double H = 0.0171;
+
+	/** Initial spacing of particles (m) */
+	static double PARTICLE_SPACING = H / 2.0;
+
+	/** Particle Mass (kg) */
+	static double MASS = REST_DENSITY * Math.pow(PARTICLE_SPACING, 2); // 2D
+
+	/** Tait constant */
+	static double B = (REST_DENSITY * Math.pow(SPEED_OF_SOUND, 2)) / 7.0;
 
 }
