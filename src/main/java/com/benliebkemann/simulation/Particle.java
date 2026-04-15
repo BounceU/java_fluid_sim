@@ -5,11 +5,11 @@ import java.util.List;
 
 public class Particle {
 
-	Vector2D position, velocity, force;
+	public Vector2D position, velocity, force;
 
 	public List<Particle> neighbors = new ArrayList<>();
 
-	double density, pressure;
+	public double density, pressure;
 
 	public Particle(double x, double y) {
 		this.position = new Vector2D(x, y);

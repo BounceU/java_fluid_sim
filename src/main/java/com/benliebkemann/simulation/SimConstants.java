@@ -13,16 +13,19 @@ public class SimConstants {
 	/** Surface tension for color field gradient (N/m) */
 	static double SURFACE_TENSION = 0.0728;
 
+	/** Work of adhesion for the fluid-solid boundary (N/m) */
+	static double WORK_OF_ADHESION = 0.14; // water-glass
+
 	/** Fluid Viscosity (Pa*s) */
-	static double VISCOSITY = 0.001;
+	static double VISCOSITY = 0.1; // 0.05;// 0.001;
 
 	/** Speed of sound (m/s) */
-	static double SPEED_OF_SOUND = 50.0; // 1480.0;
+	static double SPEED_OF_SOUND = 15.0;// 50.0; // 1480.0;
 
 	// Simulation constants
 
 	/** Smoothing Radius (Kernel Size), (m) */
-	static double H = 0.0171;
+	static double H = 0.001;
 
 	/** Initial spacing of particles (m) */
 	static double PARTICLE_SPACING = H / 2.0;

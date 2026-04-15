@@ -3,11 +3,15 @@ package com.benliebkemann.simulation;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.benliebkemann.viewer.Renderer;
+
 public class Simulation implements Runnable {
 
 	private List<Particle> particles;
 
 	private SpatialHash spatialHash;
+
+	private Renderer renderObserver;
 
 	double simulationTime;
 
@@ -16,7 +20,10 @@ public class Simulation implements Runnable {
 
 	Vector2D pressureAcceleration;
 	Vector2D viscosityAcceleration;
-	Vector2D colorGradient;
+
+	Vector2D fluidColorGradient;
+	Vector2D solidColorGradient;
+
 	Vector2D pressureGradient;
 
 	public Simulation() {
@@ -25,18 +32,37 @@ public class Simulation implements Runnable {
 		temp2 = new Vector2D(0.0, 0.0);
 		pressureAcceleration = new Vector2D(0.0, 0.0);
 		viscosityAcceleration = new Vector2D(0.0, 0.0);
-		colorGradient = new Vector2D(0.0, 0.0);
+		fluidColorGradient = new Vector2D(0.0, 0.0);
+		solidColorGradient = new Vector2D(0.0, 0.0);
 		pressureGradient = new Vector2D(0.0, 0.0);
 		spatialHash = new SpatialHash(SimConstants.H);
 		simulationTime = 0.0;
+		renderObserver = null;
 		initParticles();
 	}
 
+	public void addRenderer(Renderer renderer) {
+		this.renderObserver = renderer;
+	}
+
+	public void fireRender() {
+		this.renderObserver.process(particles);
+	}
+
 	private void initParticles() {
-		double spacing = SimConstants.H / 2.0;
-		for (double y = 0.01; y < 0.06; y += spacing) {
-			for (double x = 0.1; x < 0.3; x += spacing) {
+		double spacing = SimConstants.PARTICLE_SPACING;
+
+		for (double y = 0.008; y <= 0.010; y += spacing) {
+			for (double x = 0.0; x <= 0.20; x += spacing) {
 				particles.add(new Particle(x, y));
+			}
+		}
+
+		for (double y = 0.010 + spacing / 2; y <= 0.015; y += spacing) {
+			for (double x = 0.02; x <= 0.18; x += spacing) {
+				Particle p = new Particle(x, y);
+				p.velocity.y = (Math.random() - 0.5) * 0.05;
+				particles.add(p);
 			}
 		}
 	}
@@ -45,6 +71,7 @@ public class Simulation implements Runnable {
 	public void run() {
 
 		simulationTime = 0.0;
+
 		int frameCount = 0;
 
 		while (true) {
@@ -56,6 +83,15 @@ public class Simulation implements Runnable {
 
 			updatePhysics(dt);
 			simulationTime += dt;
+
+			System.out.println(particles.size() + "\t" + simulationTime);
+
+			while (simulationTime > frameCount * 1.0 / 200) {
+				System.out.println("Trying to render!");
+				fireRender();
+				frameCount++;
+
+			}
 
 		}
 
@@ -74,14 +110,14 @@ public class Simulation implements Runnable {
 
 	private void updatePhysics(double dt) {
 
-		double[] zeros = { 0.0, 0.0 };
-
 		spatialHash.clear();
 		for (Particle p : particles) {
 			spatialHash.insert(p);
 		}
 
 		// Pass 1, density/pressure
+
+		double GRID_REST_DENSITY = SimConstants.REST_DENSITY * 1.0146;
 
 		for (Particle p1 : particles) {
 			p1.density = SimConstants.MASS * poly6Kernel(0.0, SimConstants.H);
@@ -101,11 +137,13 @@ public class Simulation implements Runnable {
 				}
 			}
 
-			double densityRatio = p1.density / SimConstants.REST_DENSITY;
+			double densityRatio = p1.density / GRID_REST_DENSITY; // SimConstants.REST_DENSITY;
 			p1.pressure = SimConstants.B * (Math.pow(densityRatio, 7.0) - 1.0);
 
-			if (p1.pressure < 0.0)
+			// Prevent negative pressure (which would lead to tensile instability)
+			if (p1.pressure < 0.0) {
 				p1.pressure = 0.0;
+			}
 
 		}
 
@@ -115,9 +153,11 @@ public class Simulation implements Runnable {
 			pressureAcceleration.y = 0;
 			viscosityAcceleration.x = 0;
 			viscosityAcceleration.y = 0;
-			colorGradient.x = 0;
-			colorGradient.y = 0;
-			double colorLaplacian = 0.0;
+			fluidColorGradient.x = 0;
+			fluidColorGradient.y = 0;
+			solidColorGradient.x = 0;
+			solidColorGradient.y = 0;
+			double colorLaplacian = 0.0;// (SimConstants.MASS / p1.density) * poly6KernelLaplacian(0.0, SimConstants.H);
 
 			for (Particle p2 : p1.neighbors) {
 				if (p1 == p2)
@@ -143,10 +183,16 @@ public class Simulation implements Runnable {
 							/ (p1.density * p2.density));
 					viscosityAcceleration.add(temp2);
 
+					// Color gradient for surface tension and adhesion
 					poly6KernelGradient(temp1, dist, SimConstants.H, temp2);
 					temp2.scale(SimConstants.MASS / p2.density);
-					colorGradient.add(temp2);
-					colorLaplacian += (SimConstants.MASS / p2.density) * poly6KernelLaplacian(dist, SimConstants.H);
+
+					if (p2.position.y <= 0.010) {
+						solidColorGradient.add(temp2);
+					} else {
+						fluidColorGradient.add(temp2);
+						colorLaplacian += (SimConstants.MASS / p2.density) * poly6KernelLaplacian(dist, SimConstants.H);
+					}
 				}
 			}
 
@@ -157,19 +203,33 @@ public class Simulation implements Runnable {
 			p1.force.add(viscosityAcceleration);
 
 			// Surface Tension, a = (sigma / rho_1) * kappa * n
-			double gradientMagnitude = colorGradient.mag();
-			if (gradientMagnitude > 0.01) {
-				temp1.set(colorGradient);
-				temp1.scale(-1.0 / gradientMagnitude);
-				temp1.scale((SimConstants.SURFACE_TENSION * colorLaplacian) / p1.density);
+			// double fluidGradientMagnitude = fluidColorGradient.mag();
+			// if (fluidGradientMagnitude > 200.0) { // 0.01) {
+			// temp1.set(fluidColorGradient);
+			// temp1.scale(-1.0 / fluidGradientMagnitude);
+			// temp1.scale((SimConstants.SURFACE_TENSION * colorLaplacian) / p1.density);
+			// p1.force.add(temp1);
+			// }
+			double SURFACE_COHESION = 0.8;
+			temp1.set(fluidColorGradient);
+			temp1.scale(SURFACE_COHESION);
+			p1.force.add(temp1);
+
+			// Kinematic adhesion
+			double solidGradientMagnitude = solidColorGradient.mag();
+			if (solidGradientMagnitude > 0.01) {
+				temp1.set(solidColorGradient);
+				double SMOOTH_ADHESION = 5.8;// 0.3;
+				temp1.scale(SMOOTH_ADHESION);
 				p1.force.add(temp1);
 			}
+
 		}
 
 		// Pass 3
 		for (Particle p1 : particles) {
 
-			if (p1.position.y <= 0.015) {
+			if (p1.position.y <= 0.0101) {
 				p1.velocity.x = 0;
 				p1.velocity.y = 0;
 				continue;
@@ -178,6 +238,11 @@ public class Simulation implements Runnable {
 			temp1.set(p1.force);
 			temp1.scale(dt);
 			p1.velocity.add(temp1);
+
+			// if (simulationTime < 0.2) {
+			// double frictionStrength = 50.0 * (1.0 - (simulationTime / 0.2));
+			// p1.velocity.scale(Math.max(0.0, 1.0 - (frictionStrength * dt)));
+			// }
 
 			temp2.set(p1.velocity);
 			temp2.scale(dt);
@@ -202,7 +267,7 @@ public class Simulation implements Runnable {
 	}
 
 	private void poly6KernelGradient(Vector2D r, double dist, double h, Vector2D target) {
-		if (dist <= 0.0001 || dist >= h) {
+		if (dist <= 1e-8 || dist >= h) {
 			target.x = 0;
 			target.y = 0;
 			return;
@@ -229,7 +294,7 @@ public class Simulation implements Runnable {
 	}
 
 	private void spikyKernelGradient(Vector2D r, double dist, double h, Vector2D target) {
-		if (dist <= 0.0001 || dist >= h) {
+		if (dist <= 1e-8 || dist >= h) {
 			target.x = 0;
 			target.y = 0;
 			return;
