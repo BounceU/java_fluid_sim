@@ -81,7 +81,7 @@ On launch, a file picker dialog will appear. **Select a directory** where output
 3. The simulation window opens showing:
    - **Red** — solid ceiling particles (pinned, never move)
    - **Blue** — fluid particles
-4. Frames are saved as `outputImages0.png`, `outputImages1.png`, … in the chosen directory
+4. Frames are saved as `outputImages000.png`, `outputImages001.png`, … in the chosen directory
 5. Close the window to stop
 
 ### Assembling Frames into Video
