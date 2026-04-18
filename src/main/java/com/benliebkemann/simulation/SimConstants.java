@@ -5,7 +5,7 @@ public class SimConstants {
 	// Physical constants
 
 	/** Gravitational Constant (m/s^2) */
-	public static double GRAVITY = 9.81;
+	public static double GRAVITY = 0.5;// 9.81;
 
 	/** Rest density (kg/m^3) */
 	static double REST_DENSITY = 998.2;
@@ -36,4 +36,12 @@ public class SimConstants {
 	/** Tait constant */
 	static double B = (REST_DENSITY * Math.pow(SPEED_OF_SOUND, 2)) / 7.0;
 
+	static double SMOOTH_ADHESION = 5.8;// 0.3;
+
+	/**
+	 * Monaghan (2000) artificial pressure epsilon.
+	 * Only activates when pressure is negative (tensile).
+	 * Tune between 0.01 (mild) and 0.3 (aggressive). Start at 0.1.
+	 */
+	static double ARTIFICIAL_PRESSURE_EPS = 0.1;
 }

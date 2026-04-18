@@ -26,6 +26,8 @@ public class Simulation implements Runnable {
 
 	Vector2D pressureGradient;
 
+	private double wRef;
+
 	public Simulation() {
 		particles = new ArrayList<>();
 		temp1 = new Vector2D(0.0, 0.0);
@@ -38,6 +40,8 @@ public class Simulation implements Runnable {
 		spatialHash = new SpatialHash(SimConstants.H);
 		simulationTime = 0.0;
 		renderObserver = null;
+		this.wRef = poly6Kernel(SimConstants.PARTICLE_SPACING, SimConstants.H);
+
 		initParticles();
 	}
 
@@ -54,14 +58,17 @@ public class Simulation implements Runnable {
 
 		for (double y = 0.008; y <= 0.010; y += spacing) {
 			for (double x = 0.0; x <= 0.20; x += spacing) {
-				particles.add(new Particle(x, y));
+				Particle p = new Particle(x, y);
+				p.isSolid = true;
+				particles.add(p);
 			}
 		}
 
-		for (double y = 0.010 + spacing / 2; y <= 0.015; y += spacing) {
+		for (double y = 0.010 + spacing / 2; y <= 0.010 + SimConstants.H * 2.9; y += spacing) {
 			for (double x = 0.02; x <= 0.18; x += spacing) {
 				Particle p = new Particle(x, y);
-				p.velocity.y = (Math.random() - 0.5) * 0.05;
+				double lambda = 0.03;
+				p.velocity.y = 0.005 * Math.sin(2 * Math.PI * x / lambda);
 				particles.add(p);
 			}
 		}
@@ -117,8 +124,6 @@ public class Simulation implements Runnable {
 
 		// Pass 1, density/pressure
 
-		double GRID_REST_DENSITY = SimConstants.REST_DENSITY * 1.0146;
-
 		for (Particle p1 : particles) {
 			p1.density = SimConstants.MASS * poly6Kernel(0.0, SimConstants.H);
 
@@ -137,13 +142,8 @@ public class Simulation implements Runnable {
 				}
 			}
 
-			double densityRatio = p1.density / GRID_REST_DENSITY; // SimConstants.REST_DENSITY;
+			double densityRatio = p1.density / SimConstants.REST_DENSITY;
 			p1.pressure = SimConstants.B * (Math.pow(densityRatio, 7.0) - 1.0);
-
-			// Prevent negative pressure (which would lead to tensile instability)
-			if (p1.pressure < 0.0) {
-				p1.pressure = 0.0;
-			}
 
 		}
 
@@ -157,7 +157,7 @@ public class Simulation implements Runnable {
 			fluidColorGradient.y = 0;
 			solidColorGradient.x = 0;
 			solidColorGradient.y = 0;
-			double colorLaplacian = 0.0;// (SimConstants.MASS / p1.density) * poly6KernelLaplacian(0.0, SimConstants.H);
+			double colorLaplacian = (SimConstants.MASS / p1.density) * poly6KernelLaplacian(0.0, SimConstants.H);
 
 			for (Particle p2 : p1.neighbors) {
 				if (p1 == p2)
@@ -168,11 +168,22 @@ public class Simulation implements Runnable {
 				double dist = temp1.mag();
 
 				if (dist < SimConstants.H) {
-					// Pressure acceleration, a = -m_2 * (p_1/rho_1^2 + p_2/rho_2^2) * gradW
+					// Pressure acceleration, a = -m_2 * (p_1/rho_1^2 + p_2/rho_2^2 + R_ij*f^4) *
+					// gradW
+
 					spikyKernelGradient(temp1, dist, SimConstants.H, pressureGradient);
 					double pTerm = (p1.pressure / (p1.density * p1.density))
 							+ (p2.pressure / (p2.density * p2.density));
-					pressureGradient.scale(-SimConstants.MASS * pTerm);
+
+					double Ri = (p1.pressure < 0) ? SimConstants.ARTIFICIAL_PRESSURE_EPS
+							* Math.abs(p1.pressure) / (p1.density * p1.density) : 0.0;
+					double Rj = (p2.pressure < 0) ? SimConstants.ARTIFICIAL_PRESSURE_EPS
+							* Math.abs(p2.pressure) / (p2.density * p2.density) : 0.0;
+					double fij = poly6Kernel(dist, SimConstants.H)
+							/ wRef;
+					double artificialPressure = (Ri + Rj) * Math.pow(fij, 4);
+
+					pressureGradient.scale(-SimConstants.MASS * (pTerm + artificialPressure));
 					pressureAcceleration.add(pressureGradient);
 
 					// Viscosity acceleration, a = (mu * m_2 / (rho_1 * rho_2)) * lapW * (v_2 - v_1)
@@ -187,7 +198,7 @@ public class Simulation implements Runnable {
 					poly6KernelGradient(temp1, dist, SimConstants.H, temp2);
 					temp2.scale(SimConstants.MASS / p2.density);
 
-					if (p2.position.y <= 0.010) {
+					if (p2.isSolid) {
 						solidColorGradient.add(temp2);
 					} else {
 						fluidColorGradient.add(temp2);
@@ -203,24 +214,22 @@ public class Simulation implements Runnable {
 			p1.force.add(viscosityAcceleration);
 
 			// Surface Tension, a = (sigma / rho_1) * kappa * n
-			// double fluidGradientMagnitude = fluidColorGradient.mag();
-			// if (fluidGradientMagnitude > 200.0) { // 0.01) {
-			// temp1.set(fluidColorGradient);
-			// temp1.scale(-1.0 / fluidGradientMagnitude);
-			// temp1.scale((SimConstants.SURFACE_TENSION * colorLaplacian) / p1.density);
-			// p1.force.add(temp1);
-			// }
-			double SURFACE_COHESION = 0.8;
-			temp1.set(fluidColorGradient);
-			temp1.scale(SURFACE_COHESION);
-			p1.force.add(temp1);
+			double fluidGradientMagnitude = fluidColorGradient.mag();
+			// (MASS/rho) * |grad_W| \approx PARTICLE_SPACING^2 * (24/pi/H^8) * r *
+			// (H^2−r^2)^2
+			// \approx 500 m⁻¹
+			if (fluidGradientMagnitude > 50.0) {
+				double kappa = -colorLaplacian / fluidGradientMagnitude;
+				temp1.set(fluidColorGradient);
+				temp1.scale((SimConstants.SURFACE_TENSION * kappa) / (p1.density * fluidGradientMagnitude));
+				p1.force.add(temp1);
+			}
 
 			// Kinematic adhesion
 			double solidGradientMagnitude = solidColorGradient.mag();
 			if (solidGradientMagnitude > 0.01) {
 				temp1.set(solidColorGradient);
-				double SMOOTH_ADHESION = 5.8;// 0.3;
-				temp1.scale(SMOOTH_ADHESION);
+				temp1.scale(SimConstants.SMOOTH_ADHESION);
 				p1.force.add(temp1);
 			}
 
@@ -229,7 +238,7 @@ public class Simulation implements Runnable {
 		// Pass 3
 		for (Particle p1 : particles) {
 
-			if (p1.position.y <= 0.0101) {
+			if (p1.isSolid) {
 				p1.velocity.x = 0;
 				p1.velocity.y = 0;
 				continue;
@@ -239,15 +248,21 @@ public class Simulation implements Runnable {
 			temp1.scale(dt);
 			p1.velocity.add(temp1);
 
-			// if (simulationTime < 0.2) {
-			// double frictionStrength = 50.0 * (1.0 - (simulationTime / 0.2));
-			// p1.velocity.scale(Math.max(0.0, 1.0 - (frictionStrength * dt)));
-			// }
-
 			temp2.set(p1.velocity);
 			temp2.scale(dt);
 			p1.position.add(temp2);
+
+			if (p1.position.x < 0) {
+				p1.position.x = 0;
+				p1.velocity.x = Math.abs(p1.velocity.x);
+			} else if (p1.position.x > 0.20) {
+				p1.position.x = 0.20;
+				p1.velocity.x = -Math.abs(p1.velocity.x);
+			}
+
 		}
+
+		particles.removeIf(p -> !p.isSolid && p.position.y > 0.2);
 
 	}
 

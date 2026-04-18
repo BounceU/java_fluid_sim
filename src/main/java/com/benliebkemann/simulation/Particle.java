@@ -11,12 +11,15 @@ public class Particle {
 
 	public double density, pressure;
 
+	public boolean isSolid;
+
 	public Particle(double x, double y) {
 		this.position = new Vector2D(x, y);
 		this.velocity = new Vector2D(0.0, 0.0);
 		this.force = new Vector2D(0.0, 0.0);
 
 		this.density = 0.0;
+		this.isSolid = false;
 		this.pressure = 0.0;
 	}
 
