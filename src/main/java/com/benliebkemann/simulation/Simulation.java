@@ -64,7 +64,7 @@ public class Simulation implements Runnable {
 			}
 		}
 
-		for (double y = 0.010 + spacing / 2; y <= 0.010 + SimConstants.H * 2.9; y += spacing) {
+		for (double y = 0.010 + spacing / 2; y <= 0.010 + SimConstants.H * 6.0; y += spacing) {
 			for (double x = 0.02; x <= 0.18; x += spacing) {
 				Particle p = new Particle(x, y);
 				double lambda = 0.03;

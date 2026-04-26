@@ -2,19 +2,23 @@ package com.benliebkemann;
 
 import java.awt.FileDialog;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
 import com.benliebkemann.simulation.Simulation;
 import com.benliebkemann.viewer.Camera;
+import com.benliebkemann.viewer.DensityCSVSaveRenderer;
+import com.benliebkemann.viewer.DensityRenderer;
+import com.benliebkemann.viewer.DensitySaveRenderer;
+import com.benliebkemann.viewer.PressureSaveRenderer;
 import com.benliebkemann.viewer.Renderer;
 import com.benliebkemann.viewer.SaveRenderer;
-import com.benliebkemann.viewer.WindowRenderer;
 
 public class App {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         SwingUtilities.invokeLater(App::createAndShowUi);
 
@@ -47,12 +51,22 @@ public class App {
         Renderer saveRenderer = new SaveRenderer(renderSize, renderSize, c,
                 filePath, "outputImages",
                 null);
-        WindowRenderer windowRenderer = new WindowRenderer(renderSize, renderSize, c,
+        Renderer densitySaveRenderer = new DensitySaveRenderer(renderSize, renderSize, c,
+                filePath, "densityImages",
                 saveRenderer);
+        Renderer pressureSaveRenderer = new PressureSaveRenderer(renderSize, renderSize, c,
+                filePath, "pressureImages",
+                densitySaveRenderer);
+        Renderer densitySaveCSVRdnerer = new DensityCSVSaveRenderer(renderSize, renderSize, c, filePath,
+                "densityValues", pressureSaveRenderer);
+        // WindowRenderer windowRenderer = new WindowRenderer(renderSize, renderSize, c,
+        // saveRenderer);
+
+        DensityRenderer densityRenderer = new DensityRenderer(renderSize, renderSize, c, densitySaveCSVRdnerer);
 
         JFrame frame = new JFrame("FluidSim");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(windowRenderer.panel);
+        frame.add(densityRenderer.panel);
         frame.pack();
         frame.setSize(900, 600);
         frame.setLocationRelativeTo(null);
@@ -62,7 +76,7 @@ public class App {
             public void run() {
 
                 Simulation simulation = new Simulation();
-                simulation.addRenderer(windowRenderer);
+                simulation.addRenderer(densityRenderer);
                 simulation.run();
             }
         };
