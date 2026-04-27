@@ -11,7 +11,7 @@ public class SimConstants {
 	static double REST_DENSITY = 998.2;
 
 	/** Surface tension for color field gradient (N/m) */
-	static double SURFACE_TENSION = 0.728;
+	static double SURFACE_TENSION = 0.0728;
 
 	/** Work of adhesion for the fluid-solid boundary (N/m) */
 	static double WORK_OF_ADHESION = 0.14; // water-glass

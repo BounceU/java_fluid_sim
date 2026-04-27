@@ -76,7 +76,7 @@ public class DensityCSVSaveRenderer extends Renderer {
 				image.setRGB(x, y, new Color(outColor, outColor, outColor).getRGB());
 			}
 		}
-		String finalName = String.format("%s%s%s%03d.png", filePath, File.separator, name, numFrames);
+		String finalName = String.format("%s%s%s%03d.csv", filePath, File.separator, name, numFrames);
 		numFrames++;
 
 		File newFile = new File(finalName);

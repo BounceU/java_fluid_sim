@@ -25,12 +25,15 @@ data = np.nan_to_num(frames, nan=0.0)
 # Subtract per-frame mean to remove DC / background level
 detrended = data - data.mean(axis=1, keepdims=True)
 
-# FFT along spatial axis, normalized by N so power ~ (amplitude/2)^2
-fft_vals = np.fft.rfft(detrended, axis=1) / N_cols
+# Zero-pad to improve spectral interpolation (finds true peak λ between raw bins)
+N_fft = max(4096, N_cols * 32)
+
+# FFT along spatial axis, normalized by N_cols so power ~ (amplitude/2)^2
+fft_vals = np.fft.rfft(detrended, n=N_fft, axis=1) / N_cols
 power = np.abs(fft_vals) ** 2  # units: (particle count)^2
 
 # Frequencies and wavelengths
-freqs = np.fft.rfftfreq(N_cols, d=DX)  # cycles/meter
+freqs = np.fft.rfftfreq(N_fft, d=DX)  # cycles/meter
 with np.errstate(divide='ignore'):
     wavelengths_m = np.where(freqs > 0, 1.0 / freqs, np.inf)
 wavelengths_mm = wavelengths_m * 1e3  # convert to mm

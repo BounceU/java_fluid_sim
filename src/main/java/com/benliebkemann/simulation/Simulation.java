@@ -2,6 +2,7 @@ package com.benliebkemann.simulation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import com.benliebkemann.viewer.Renderer;
 
@@ -25,6 +26,7 @@ public class Simulation implements Runnable {
 	Vector2D solidColorGradient;
 
 	Vector2D pressureGradient;
+	Random rand;
 
 	private double wRef;
 
@@ -41,6 +43,8 @@ public class Simulation implements Runnable {
 		simulationTime = 0.0;
 		renderObserver = null;
 		this.wRef = poly6Kernel(SimConstants.PARTICLE_SPACING, SimConstants.H);
+
+		rand = new Random(1234);
 
 		initParticles();
 	}
@@ -68,7 +72,8 @@ public class Simulation implements Runnable {
 			for (double x = 0.02; x <= 0.18; x += spacing) {
 				Particle p = new Particle(x, y);
 				double lambda = 0.03;
-				p.velocity.y = 0.005 * Math.sin(2 * Math.PI * x / lambda);
+				p.velocity.y = 0.005 * Math.sin(2 * Math.PI * x / lambda) * rand.nextDouble();
+				p.velocity.x = 0.005 * Math.cos(2 * Math.PI * x / lambda) * rand.nextDouble();
 				particles.add(p);
 			}
 		}

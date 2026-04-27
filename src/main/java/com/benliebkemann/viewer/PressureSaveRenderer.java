@@ -72,7 +72,7 @@ public class PressureSaveRenderer extends Renderer {
 						density += p.density;
 					}
 				}
-				int outColor = Math.clamp((int) (0 + pressure * 0.001), 0, 255);
+				int outColor = Math.clamp((int) (128 + pressure * 0.001), 0, 255);
 				image.setRGB(x, y, new Color(outColor, outColor, outColor).getRGB());
 			}
 		}
